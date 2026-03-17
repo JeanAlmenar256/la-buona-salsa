@@ -1,0 +1,17 @@
+    /* Estilo para las tarjetas de delivery */
+    .delivery-card {
+        transition: all 0.3s ease;
+        border-width: 2px !important;
+    }
+
+    /* Cuando el radio button está seleccionado */
+    .btn-check:checked + .delivery-card {
+        border-color: #f29418 !important; /* Tu naranja de marca */
+        background-color: #fff9f4 !important;
+        transform: scale(1.05);
+    }
+
+    .delivery-card:hover {
+        background-color: #f6f7f8;
+        cursor: pointer;
+    }
