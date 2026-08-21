@@ -10,66 +10,80 @@ class Usuario extends BaseController
     public function registrarBasico()
     {
         $model = new UsuarioModel();
-        $email = $this->request->getPost('email');
-        $nombre = $this->request->getPost('nombre');
+        $email = trim($this->request->getPost('email'));
+        $nombre = trim($this->request->getPost('nombre'));
+
+        if (empty($email) || empty($nombre)) {
+            return redirect()->back()->with('error', 'Por favor ingresa tu nombre y correo.');
+        }
 
         // Buscamos si el correo ya existe
         $usuario = $model->where('email', $email)->first();
 
         if (!$usuario) {
-            // Si no existe, lo creamos de cero
-            $model->insert([
+            $id = $model->insert([
                 'nombre' => $nombre,
                 'email'  => $email,
             ]);
-            $usuario = $model->where('email', $email)->first();
+            $usuario = $model->find($id);
         }
 
-        // Guardamos los datos en la sesión para que el sistema lo "recuerde"
+        // Guardamos los datos en la sesión
         session()->set([
             'usuario_id' => $usuario['id'],
             'nombre'     => $usuario['nombre'],
             'email'      => $usuario['email'],
-            'isLoggedIn' => true
+            'isLoggedIn' => true,
+            'avatar'     => $usuario['avatar'] ?? 'default-user.png'
         ]);
+
+        if (empty($usuario['direccion']) || empty($usuario['telefono'])) {
+            return redirect()->to(base_url('completar-datos/' . $usuario['id']));
+        }
 
         return redirect()->to(base_url('perfil'));
     }
 
     public function perfil()
-{
-    // Por ahora le pasamos un array vacío para que la tabla no de error
-    $data['compras'] = []; 
-    return view('perfil', $data);
-}
+    {
+        if (!session()->get('isLoggedIn')) {
+            return redirect()->to(base_url('/'))->with('msg_info', 'Inicia sesión para ver tu perfil.');
+        }
 
-    public function subirAvatar()
-{
-    $img = $this->request->getFile('avatar');
+        $model = new UsuarioModel();
+        $usuario = $model->find(session()->get('usuario_id'));
 
-    // 1. Validar que sea una imagen válida
-    if ($img->isValid() && !$img->hasMoved()) {
-        
-        // Generamos un nombre nuevo para la imagen (ej: 16234567.jpg)
-        $nuevoNombre = $img->getRandomName();
+        $data = [
+            'usuario' => $usuario,
+            'compras' => []
+        ];
 
-        // 2. Movemos la imagen a la carpeta public/uploads/perfiles
-        // Si la carpeta no existe, CodeIgniter la crea sola.
-        $img->move(ROOTPATH . 'public/uploads/perfiles', $nuevoNombre);
-
-        // 3. Actualizamos la Base de Datos
-        $model = new \App\Models\UsuarioModel();
-        $id = session()->get('usuario_id');
-        
-        $model->update($id, ['avatar' => $nuevoNombre]);
-
-        // 4. Actualizamos la Sesión para que el cambio se vea al instante
-        session()->set('avatar', $nuevoNombre);
-
-        return redirect()->back()->with('msg', '¡Foto de perfil actualizada!');
+        return view('perfil', $data);
     }
 
-    return redirect()->back()->with('msg', 'Error al subir la imagen.');
-}
-    
+    public function salir()
+    {
+        session()->destroy();
+        return redirect()->to(base_url('/'));
+    }
+
+    public function subirAvatar()
+    {
+        $img = $this->request->getFile('avatar');
+
+        if ($img->isValid() && !$img->hasMoved()) {
+            $nuevoNombre = $img->getRandomName();
+            $img->move(ROOTPATH . 'public/uploads/perfiles', $nuevoNombre);
+
+            $model = new \App\Models\UsuarioModel();
+            $id = session()->get('usuario_id');
+            
+            $model->update($id, ['avatar' => $nuevoNombre]);
+            session()->set('avatar', $nuevoNombre);
+
+            return redirect()->back()->with('msg', '¡Foto de perfil actualizada con éxito!');
+        }
+
+        return redirect()->back()->with('msg', 'Error al subir la imagen.');
+    }
 }

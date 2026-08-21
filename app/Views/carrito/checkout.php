@@ -2,121 +2,302 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirmar Pedido - La Buona Salsa</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<?= base_url('css/estilos.css') ?>">
+    
+    <!-- SDK Mercado Pago -->
     <script src="https://sdk.mercadopago.com/js/v2"></script>
-    <style>
-        :root { --rojo-salsa: #9B1212; }
-        .btn-pagar { background-color: var(--rojo-salsa); color: white; font-weight: bold; border: none; }
-        .btn-pagar:hover { background-color: #7a0e0e; }
-        .card-header { background-color: var(--rojo-salsa) !important; color: white; }
-    </style>
 </head>
-<body class="bg-light">
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header">
-                    <h5 class="mb-0"><?= isset($preferenceId) ? 'Finalizar Pago' : 'Configura tu pedido' ?></h5>
-                </div>
-                <div class="card-body">
-                    <?php if (!isset($preferenceId)): ?>
-                        <form action="<?= base_url('carrito/procesarPago') ?>" method="POST">
-                            <?= csrf_field() ?> 
-                            <input type="hidden" name="id_producto" value="<?= $producto['id'] ?>">
-                            <input type="hidden" name="usuario_id" value="<?= $usuario_id ?>">
+<body style="background-color: var(--fondo-calido);">
 
-                            <div class="mb-3">
-                                <label class="fw-bold">Cantidad:</label>
-                                <input type="number" name="cantidad" id="inputCantidad" class="form-control" value="1" min="1" max="<?= $producto['stock'] ?>">
+    <!-- Navbar Simple -->
+    <nav class="navbar navbar-dark navbar-salsa">
+        <div class="container justify-content-between">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="<?= base_url() ?>">
+                <img src="<?= base_url('assets/img/LOGO BORDO 1.png') ?>" alt="La Buona Salsa" height="40">
+            </a>
+            <span class="text-white-50 small d-none d-sm-inline">
+                <i class="bi bi-lock-fill text-warning me-1"></i> Checkout 100% Protegido
+            </span>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <!-- Step Progress Indicator -->
+        <div class="step-indicator">
+            <div class="step-item active">
+                <div class="step-circle"><i class="bi bi-check-lg"></i></div>
+                <span class="d-none d-sm-inline">1. Registro</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-item active">
+                <div class="step-circle"><i class="bi bi-check-lg"></i></div>
+                <span class="d-none d-sm-inline">2. Datos de Envío</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-item active">
+                <div class="step-circle">3</div>
+                <span>Confirmar Compra</span>
+            </div>
+        </div>
+
+        <?php if (!empty($pedidoConfirmado)): ?>
+            <!-- Pantalla de Pedido Confirmado -->
+            <div class="row justify-content-center">
+                <div class="col-lg-7">
+                    <div class="salsa-form-card text-center py-5">
+                        <div class="mb-3">
+                            <span class="display-1 text-success"><i class="bi bi-check-circle-fill"></i></span>
+                        </div>
+                        <h2 class="fw-bold font-display text-dark mb-2">¡Pedido Confirmado con Éxito!</h2>
+                        <p class="text-muted mb-4">
+                            Muchas gracias por tu compra, <strong><?= esc($usuario['nombre'] ?? 'Cliente') ?></strong>. Ya estamos preparando tu salsa artesanal para el envío.
+                        </p>
+
+                        <div class="bg-light p-4 rounded-4 text-start mb-4 border">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Producto:</span>
+                                <span class="fw-bold text-dark"><?= esc($producto['nombre']) ?> (x<?= esc($cantidad) ?>)</span>
                             </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Entrega:</span>
+                                <span class="fw-bold text-dark"><?= esc($metodo_envio) ?></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Dirección de Envío:</span>
+                                <span class="fw-bold text-dark"><?= esc($usuario['direccion'] ?? 'Retiro en local') ?></span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between fs-5 fw-bold">
+                                <span>Total Abonado:</span>
+                                <span class="text-danger">$ <?= number_format($total, 2, ',', '.') ?></span>
+                            </div>
+                        </div>
 
-                            <div class="mb-3">
-                                <label class="fw-bold">Envío:</label>
-                                <div class="form-check border p-2 mb-2 rounded">
-                                    <input class="form-check-input" type="radio" name="metodo_envio" id="retiro" value="0" checked>
-                                    <label class="form-check-label" for="retiro">Retiro en Local ($0)</label>
-                                </div><br>
-                                <div class="mt-4">
-                                <h5 class="fw-bold mb-3" style="color: #9B1212;">Elegí cómo recibir tu salsa:</h5>
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_rappi" value="Rappi" checked autocomplete="off">
-                                        <label class="btn btn-outline-light border shadow-sm w-100 p-3 delivery-card" for="envio_rappi">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/0/06/Rappi_logo.svg" alt="Rappi" height="30" class="mb-2">
-                                            <div class="small text-dark fw-bold">Rappi Entregas</div>
+                        <a href="<?= base_url() ?>" class="btn btn-salsa-primary px-5 py-3">
+                            <i class="bi bi-house-door-fill me-1"></i> Volver a la Tienda
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <?php else: ?>
+            <!-- Formulario de Configuración y Pago del Pedido -->
+            <div class="row g-4">
+                <!-- Columna Izquierda: Configuración del Pedido -->
+                <div class="col-lg-8">
+                    <div class="salsa-form-card mb-4">
+                        <h4 class="fw-bold mb-3 font-display text-dark d-flex align-items-center gap-2">
+                            <i class="bi bi-geo-alt-fill text-danger"></i> Datos de Entrega y Destinatario
+                        </h4>
+
+                        <div class="p-3 bg-light rounded-4 border d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold text-dark"><?= esc($usuario['nombre'] ?? 'Usuario') ?></div>
+                                <div class="text-muted small"><?= esc($usuario['direccion'] ?? 'Sin dirección registrada') ?></div>
+                                <div class="text-muted small">
+                                    <i class="bi bi-telephone me-1"></i> <?= esc($usuario['telefono'] ?? '-') ?> | CP: <?= esc($usuario['cp'] ?? '-') ?>
+                                </div>
+                            </div>
+                            <div>
+                                <a href="<?= base_url('completar-datos/' . $usuario_id) ?>" class="btn btn-sm btn-outline-secondary rounded-pill">
+                                    <i class="bi bi-pencil me-1"></i> Modificar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="salsa-form-card">
+                        <h4 class="fw-bold mb-4 font-display text-dark">
+                            <i class="bi bi-truck text-danger me-2"></i> Método de Envío
+                        </h4>
+
+                        <?php if (!isset($preferenceId)): ?>
+                            <form id="formPedido" action="<?= base_url('carrito/procesarPago') ?>" method="POST">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="id_producto" value="<?= $producto['id'] ?>">
+                                <input type="hidden" name="usuario_id" value="<?= $usuario_id ?>">
+
+                                <!-- Selección de Entrega -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6 col-xl-3">
+                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_rappi" value="Rappi" checked data-costo="1200">
+                                        <label class="delivery-option-card" for="envio_rappi">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/0/06/Rappi_logo.svg" alt="Rappi" height="24" class="mb-2">
+                                            <div class="small fw-bold text-dark">Rappi Entregas</div>
+                                            <div class="text-success fw-bold small">+$1.200</div>
                                         </label>
                                     </div>
 
-                                    <div class="col-md-4">
-                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_didi" value="DiDi" autocomplete="off">
-                                        <label class="btn btn-outline-light border shadow-sm w-100 p-3 delivery-card" for="envio_didi">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/DiDi_logo.svg" alt="DiDi" height="30" class="mb-2">
-                                            <div class="small text-dark fw-bold">DiDi Entrega</div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_didi" value="DiDi" data-costo="950">
+                                        <label class="delivery-option-card" for="envio_didi">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/DiDi_logo.svg" alt="DiDi" height="24" class="mb-2">
+                                            <div class="small fw-bold text-dark">DiDi Entrega</div>
+                                            <div class="text-success fw-bold small">+$950</div>
                                         </label>
                                     </div>
 
-                                    <div class="col-md-4">
-                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_uber" value="Uber" autocomplete="off">
-                                        <label class="btn btn-outline-light border shadow-sm w-100 p-3 delivery-card" for="envio_uber">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/58/Uber_logo_2018.svg" alt="Uber" height="20" class="mb-2 mt-2">
-                                            <div class="small text-dark fw-bold">Uber Flash</div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_uber" value="Uber" data-costo="1200">
+                                        <label class="delivery-option-card" for="envio_uber">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/58/Uber_logo_2018.svg" alt="Uber" height="18" class="mb-2 mt-1">
+                                            <div class="small fw-bold text-dark">Uber Flash</div>
+                                            <div class="text-success fw-bold small">+$1.200</div>
+                                        </label>
+                                    </div>
+
+                                    <div class="col-md-6 col-xl-3">
+                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_retiro" value="Retiro en local" data-costo="0">
+                                        <label class="delivery-option-card" for="envio_retiro">
+                                            <div class="fs-4 mb-1 text-danger"><i class="bi bi-shop"></i></div>
+                                            <div class="small fw-bold text-dark">Retiro en Local</div>
+                                            <div class="text-muted fw-bold small">Gratis ($0)</div>
                                         </label>
                                     </div>
                                 </div>
+
+                                <!-- Cantidad de Frascos -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-dark small">Cantidad de frascos a comprar:</label>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <button type="button" class="btn btn-outline-dark rounded-circle" id="btnRestar" style="width: 40px; height: 40px;">-</button>
+                                        <input type="number" name="cantidad" id="inputCantidad" class="form-control text-center salsa-input fw-bold fs-5" value="1" min="1" max="<?= $producto['stock'] ?? 10 ?>" style="width: 90px;" readonly>
+                                        <button type="button" class="btn btn-outline-dark rounded-circle" id="btnSumar" style="width: 40px; height: 40px;">+</button>
+                                        <span class="text-muted small">(Máximo stock disponible: <?= $producto['stock'] ?? 10 ?> un.)</span>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-salsa-primary w-100 justify-content-center py-3 fs-5">
+                                    <i class="bi bi-check-circle-fill me-2"></i> Confirmar y Realizar Pedido
+                                </button>
+                            </form>
+                        <?php else: ?>
+                            <div class="text-center py-4">
+                                <h5 class="fw-bold mb-3 text-dark">Completa tu pago con Mercado Pago</h5>
+                                <div id="wallet_container"></div>
                             </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Resumen de Orden -->
+                <div class="col-lg-4">
+                    <div class="salsa-form-card position-sticky" style="top: 100px;">
+                        <h5 class="fw-bold mb-3 font-display border-bottom pb-2">Resumen de Tu Pedido</h5>
+
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <img src="<?= base_url('assets/img/' . ($producto['imagen_principal'] ?? 'producto1.png')) ?>" 
+                                 alt="<?= esc($producto['nombre']) ?>" 
+                                 height="75" 
+                                 class="rounded-3 p-1 bg-light border"
+                                 onerror="this.src='<?= base_url('assets/img/producto1.png') ?>'">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1"><?= esc($producto['nombre']) ?></h6>
+                                <span class="text-muted small">$ <?= number_format($producto['precio'], 2, ',', '.') ?> c/u</span>
                             </div>
-                            <button type="submit" class="btn btn-pagar w-100 btn-lg">CONTINUAR AL PAGO</button>
-                        </form>
-                    <?php else: ?>
-                        <div class="text-center py-4">
-                            <div id="wallet_container"></div> 
                         </div>
-                    <?php endif; ?>
+
+                        <div class="d-flex justify-content-between mb-2 small text-muted">
+                            <span>Subtotal (<span id="summaryCantidad">1</span> un.):</span>
+                            <span class="fw-bold text-dark" id="displaySubtotal">$ <?= number_format($producto['precio'], 2, ',', '.') ?></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-3 small text-muted">
+                            <span>Envío seleccionado:</span>
+                            <span class="fw-bold text-dark" id="displayEnvio">$ 1.200,00</span>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fs-5 fw-bold text-dark">Total:</span>
+                            <span class="fs-3 fw-extrabold text-gradient-salsa font-display" id="displayTotal">
+                                $ <?= number_format($producto['precio'] + 1200, 2, ',', '.') ?>
+                            </span>
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 text-muted small">
+                            <i class="bi bi-shield-check text-success me-1"></i> Garantía de satisfacción artesanal.
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card shadow border-success">
-                <div class="card-body text-center">
-                    <h5 class="text-muted">Total</h5>
-                    <h2 class="text-success fw-bold" id="displayTotal">$ <?= number_format($total ?? $producto['precio'], 2, ',', '.') ?></h2>
-                </div>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
-</div>
 
-<script>
-    const precioUnitario = <?= $producto['precio'] ?>;
-    const inputCant = document.getElementById('inputCantidad');
-    const display = document.getElementById('displayTotal');
+    <!-- Scripts de Cálculo Dinámico y Mercado Pago -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const precioUnitario = <?= (float)($producto['precio'] ?? 6500) ?>;
+        const maxStock = <?= (int)($producto['stock'] ?? 10) ?>;
+        const inputCant = document.getElementById('inputCantidad');
+        const displaySubtotal = document.getElementById('displaySubtotal');
+        const displayEnvio = document.getElementById('displayEnvio');
+        const displayTotal = document.getElementById('displayTotal');
+        const summaryCantidad = document.getElementById('summaryCantidad');
+        const btnRestar = document.getElementById('btnRestar');
+        const btnSumar = document.getElementById('btnSumar');
 
-    function actualizar() {
-        if(!inputCant) return;
-        let t = (precioUnitario * parseInt(inputCant.value)) + (document.getElementById('delivery').checked ? 800 : 0);
-        display.innerText = '$ ' + t.toLocaleString('es-AR', {minimumFractionDigits: 2});
-    }
+        function calcularTotales() {
+            if (!inputCant) return;
+            const cant = parseInt(inputCant.value) || 1;
+            
+            // Obtener costo de envío del radio button seleccionado
+            let costoEnvio = 0;
+            const radios = document.getElementsByName('metodo_envio');
+            for (const r of radios) {
+                if (r.checked) {
+                    costoEnvio = parseFloat(r.getAttribute('data-costo')) || 0;
+                    break;
+                }
+            }
 
-    if(inputCant){
-        inputCant.addEventListener('input', actualizar);
-        document.getElementsByName('metodo_envio').forEach(r => r.addEventListener('change', actualizar));
-    }
+            const subtotal = precioUnitario * cant;
+            const total = subtotal + costoEnvio;
 
-    // 3. INICIALIZACIÓN DE MERCADO PAGO
-    <?php if (isset($preferenceId)): ?>
-        const mp = new MercadoPago('<?= $publicKey ?>', { locale: 'es-AR' });
-        
-        // CORRECCIÓN: El ID aquí debe ser igual al del DIV de arriba ('walletBrick_container')
-        mp.bricks().create('wallet', 'wallet_container', {
-            initialization: { 
-                preferenceId: '<?= $preferenceId ?>', 
-                redirectMode: 'modal' 
-            },
-        });
-    <?php endif; ?>
-</script>
+            if (summaryCantidad) summaryCantidad.innerText = cant;
+            if (displaySubtotal) displaySubtotal.innerText = '$ ' + subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2});
+            if (displayEnvio) displayEnvio.innerText = '$ ' + costoEnvio.toLocaleString('es-AR', {minimumFractionDigits: 2});
+            if (displayTotal) displayTotal.innerText = '$ ' + total.toLocaleString('es-AR', {minimumFractionDigits: 2});
+        }
+
+        if (btnRestar && inputCant) {
+            btnRestar.addEventListener('click', () => {
+                let v = parseInt(inputCant.value) || 1;
+                if (v > 1) {
+                    inputCant.value = v - 1;
+                    calcularTotales();
+                }
+            });
+        }
+
+        if (btnSumar && inputCant) {
+            btnSumar.addEventListener('click', () => {
+                let v = parseInt(inputCant.value) || 1;
+                if (v < maxStock) {
+                    inputCant.value = v + 1;
+                    calcularTotales();
+                }
+            });
+        }
+
+        const deliveryRadios = document.getElementsByName('metodo_envio');
+        deliveryRadios.forEach(r => r.addEventListener('change', calcularTotales));
+
+        // Inicializar Mercado Pago si existe preferenceId
+        <?php if (isset($preferenceId)): ?>
+            const mp = new MercadoPago('<?= $publicKey ?>', { locale: 'es-AR' });
+            mp.bricks().create('wallet', 'wallet_container', {
+                initialization: { 
+                    preferenceId: '<?= $preferenceId ?>', 
+                    redirectMode: 'modal' 
+                },
+            });
+        <?php endif; ?>
+    </script>
 </body>
 </html>
