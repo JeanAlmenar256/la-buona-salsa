@@ -58,24 +58,52 @@
                             Muchas gracias por tu compra, <strong><?= esc($usuario['nombre'] ?? 'Cliente') ?></strong>. Ya estamos preparando tu salsa artesanal para el envío.
                         </p>
 
+                        <div class="alert alert-success border-0 rounded-4 text-start p-3 mb-4 d-flex align-items-center gap-3">
+                            <i class="bi bi-envelope-check-fill fs-2 text-success"></i>
+                            <div>
+                                <div class="fw-bold">Notificación por Email Enviada</div>
+                                <div class="small">Se envió el detalle de la entrega a <strong>jean.caret.almenar256@gmail.com</strong>.</div>
+                            </div>
+                        </div>
+
                         <div class="bg-light p-4 rounded-4 text-start mb-4 border">
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted">Producto:</span>
-                                <span class="fw-bold text-dark"><?= esc($producto['nombre']) ?> (x<?= esc($cantidad) ?>)</span>
+                                <span class="fw-bold text-dark"><?= esc($producto['nombre']) ?> (x<?= esc($cantidad ?? 1) ?>)</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted">Entrega:</span>
-                                <span class="fw-bold text-dark"><?= esc($metodo_envio) ?></span>
+                                <span class="fw-bold text-dark"><?= esc($metodo_envio ?? 'Rappi') ?></span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted">Dirección de Envío:</span>
                                 <span class="fw-bold text-dark"><?= esc($usuario['direccion'] ?? 'Retiro en local') ?></span>
                             </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Teléfono de Contacto:</span>
+                                <span class="fw-bold text-dark"><?= esc($usuario['telefono'] ?? '-') ?></span>
+                            </div>
                             <hr>
                             <div class="d-flex justify-content-between fs-5 fw-bold">
                                 <span>Total Abonado:</span>
-                                <span class="text-danger">$ <?= number_format($total, 2, ',', '.') ?></span>
+                                <span class="text-danger">$ <?= number_format($total ?? 6500, 2, ',', '.') ?></span>
                             </div>
+                        </div>
+
+                        <?php 
+                            $textoWhatsapp = "🍅 *¡NUEVO PEDIDO LA BUONA SALSA!*" . "%0A"
+                                           . "• *Producto:* " . urlencode($producto['nombre']) . " (x" . ($cantidad ?? 1) . ")" . "%0A"
+                                           . "• *Total:* $" . number_format($total ?? 6500, 2, ',', '.') . "%0A"
+                                           . "• *Envío:* " . urlencode($metodo_envio ?? 'Rappi') . "%0A"
+                                           . "• *Cliente:* " . urlencode($usuario['nombre'] ?? '') . "%0A"
+                                           . "• *Dirección:* " . urlencode($usuario['direccion'] ?? '') . "%0A"
+                                           . "• *Teléfono:* " . urlencode($usuario['telefono'] ?? '');
+                        ?>
+
+                        <div class="d-grid gap-2 mb-3">
+                            <a href="https://api.whatsapp.com/send?text=<?= $textoWhatsapp ?>" target="_blank" class="btn btn-success btn-lg py-3 fw-bold rounded-pill">
+                                <i class="bi bi-whatsapp me-2"></i> Enviar Notificación a mi WhatsApp
+                            </a>
                         </div>
 
                         <a href="<?= base_url() ?>" class="btn btn-salsa-primary px-5 py-3">
@@ -112,7 +140,7 @@
 
                     <div class="salsa-form-card">
                         <h4 class="fw-bold mb-4 font-display text-dark">
-                            <i class="bi bi-truck text-danger me-2"></i> Método de Envío
+                            <i class="bi bi-credit-card-2-front-fill text-danger me-2"></i> Forma de Pago & Envío
                         </h4>
 
                         <?php if (!isset($preferenceId)): ?>
@@ -172,13 +200,27 @@
                                 </div>
 
                                 <button type="submit" class="btn btn-salsa-primary w-100 justify-content-center py-3 fs-5">
-                                    <i class="bi bi-check-circle-fill me-2"></i> Confirmar y Realizar Pedido
+                                    <i class="bi bi-shield-check me-2"></i> Pagar con Mercado Pago
                                 </button>
                             </form>
                         <?php else: ?>
                             <div class="text-center py-4">
-                                <h5 class="fw-bold mb-3 text-dark">Completa tu pago con Mercado Pago</h5>
-                                <div id="wallet_container"></div>
+                                <div class="mb-3">
+                                    <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.18.9/mercadopago/logo__large.png" alt="Mercado Pago" height="38">
+                                </div>
+                                <h5 class="fw-bold mb-2 text-dark">Elige cómo pagar</h5>
+                                <p class="text-muted small mb-4">Tarjetas de crédito, débito, saldo en cuenta o efectivo.</p>
+                                
+                                <!-- Contenedor Oficial Wallet Brick -->
+                                <div id="wallet_container" class="mb-3"></div>
+
+                                <?php if (!empty($initPoint)): ?>
+                                    <div class="d-grid mt-3">
+                                        <a href="<?= esc($initPoint) ?>" class="btn btn-primary btn-lg py-3 fw-bold rounded-pill shadow-sm" style="background-color: #009ee3; border-color: #009ee3;">
+                                            <i class="bi bi-box-arrow-up-right me-2"></i> Abrir Checkout de Mercado Pago
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -289,14 +331,24 @@
         deliveryRadios.forEach(r => r.addEventListener('change', calcularTotales));
 
         // Inicializar Mercado Pago si existe preferenceId
-        <?php if (isset($preferenceId)): ?>
-            const mp = new MercadoPago('<?= $publicKey ?>', { locale: 'es-AR' });
-            mp.bricks().create('wallet', 'wallet_container', {
-                initialization: { 
-                    preferenceId: '<?= $preferenceId ?>', 
-                    redirectMode: 'modal' 
-                },
-            });
+        <?php if (isset($preferenceId) && !empty($publicKey)): ?>
+            try {
+                const mp = new MercadoPago('<?= $publicKey ?>', { locale: 'es-AR' });
+                mp.bricks().create('wallet', 'wallet_container', {
+                    initialization: { 
+                        preferenceId: '<?= $preferenceId ?>', 
+                        redirectMode: 'modal' 
+                    },
+                    customization: {
+                        texts: {
+                            action: 'pay',
+                            valueProp: 'security_safety'
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Error inicializando Brick MP:', err);
+            }
         <?php endif; ?>
     </script>
 </body>
