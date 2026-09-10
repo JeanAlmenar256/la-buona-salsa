@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Client\Preference\PreferenceClient;
+use MercadoPago\Exceptions\MPApiException;
 use App\Models\ProductoModel;
 use App\Models\UsuarioModel;
 
@@ -20,7 +21,10 @@ class Carrito extends BaseController
         }
 
         $usuarioModel = new UsuarioModel();
-        $usuario = $usuarioModel->find($usuario_id);
+        $usuario = null;
+        try {
+            $usuario = $usuarioModel->find($usuario_id);
+        } catch (\Throwable $e) {}
 
         // Si el usuario no tiene dirección guardada, enviarlo a completar datos
         if ($usuario && (empty($usuario['direccion']) || empty($usuario['telefono']))) {
@@ -31,9 +35,7 @@ class Carrito extends BaseController
         $producto = null;
         try {
             $producto = $productoModel->find($idProducto);
-        } catch (\Throwable $e) {
-            // Fallback
-        }
+        } catch (\Throwable $e) {}
 
         if (!$producto) {
             $producto = [
@@ -72,9 +74,7 @@ class Carrito extends BaseController
         $producto = null;
         try {
             $producto = $productoModel->find($idProducto);
-        } catch (\Throwable $e) {
-            // Fallback
-        }
+        } catch (\Throwable $e) {}
 
         if (!$producto) {
             $producto = [
@@ -90,9 +90,7 @@ class Carrito extends BaseController
         $usuario = null;
         try {
             $usuario = $usuarioModel->find($usuario_id);
-        } catch (\Throwable $e) {
-            // Fallback
-        }
+        } catch (\Throwable $e) {}
 
         if (!$usuario) {
             $usuario = [
@@ -124,8 +122,10 @@ class Carrito extends BaseController
                 $client = new PreferenceClient();
                 $items = [
                     [
-                        "title"       => $producto['nombre'],
-                        "quantity"    => $cantidadItem,
+                        "id"          => "prod-" . $idProducto,
+                        "title"       => (string)$producto['nombre'],
+                        "description" => "Salsa Artesanal La Buona",
+                        "quantity"    => (int)$cantidadItem,
                         "unit_price"  => (float)$producto['precio'],
                         "currency_id" => "ARS"
                     ]
@@ -133,7 +133,9 @@ class Carrito extends BaseController
 
                 if ($costoEnvio > 0) {
                     $items[] = [
-                        "title"       => "Envío (" . $metodoEnvio . ")",
+                        "id"          => "envio",
+                        "title"       => "Costo de Envío (" . $metodoEnvio . ")",
+                        "description" => "Envío a domicilio",
                         "quantity"    => 1,
                         "unit_price"  => (float)$costoEnvio,
                         "currency_id" => "ARS"
@@ -142,15 +144,11 @@ class Carrito extends BaseController
 
                 $preference = $client->create([
                     "items" => $items,
-                    "payer" => [
-                        "name"  => $usuario['nombre'] ?? 'Cliente',
-                        "email" => $usuario['email'] ?? 'test_user@test.com',
-                    ],
                     "back_urls" => [
                         "success" => base_url("pago/exitoso?usuario_id=" . ($usuario['id'] ?? 1) . "&id_producto=" . $idProducto . "&cant=" . $cantidadItem . "&envio=" . urlencode($metodoEnvio)),
-                        "failure" => base_url("pago/fallido")
+                        "failure" => base_url("pago/fallido"),
+                        "pending" => base_url("pago/exitoso")
                     ],
-                    "auto_return" => "approved",
                 ]);
 
                 if ($preference && isset($preference->id)) {
@@ -158,6 +156,9 @@ class Carrito extends BaseController
                     $initPoint    = $preference->init_point ?? $preference->sandbox_init_point ?? null;
                 }
 
+            } catch (MPApiException $e) {
+                $content = $e->getApiResponse() ? json_encode($e->getApiResponse()->getContent()) : $e->getMessage();
+                log_message('error', 'Error MPApiException: ' . $content);
             } catch (\Throwable $e) {
                 log_message('error', 'Error creando preferencia MP: ' . $e->getMessage());
             }
@@ -246,9 +247,7 @@ class Carrito extends BaseController
      */
     private function enviarNotificacionPedido($usuario, $producto, $cantidad, $metodoEnvio, $total, $costoEnvio)
     {
-        // Email de destino (configurable en .env con ADMIN_EMAIL)
         $destinatario = env('ADMIN_EMAIL') ?? 'jean.caret.almenar256@gmail.com';
-
         $asunto = "🍅 ¡Nuevo Pedido Confirmado! - La Buona Salsa";
 
         $cuerpo = "
