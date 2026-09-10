@@ -9,7 +9,17 @@ class App extends BaseConfig
     /**
      * Auto-detect host or local IP
      */
-    public string $baseURL = '';
+    public string $baseURL = 'http://192.168.0.100/';
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        if (isset($_SERVER['HTTP_HOST']) && !empty($_SERVER['HTTP_HOST'])) {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+            $this->baseURL = $protocol . $_SERVER['HTTP_HOST'] . '/';
+        }
+    }
 
     public array $allowedHostnames = [];
 
