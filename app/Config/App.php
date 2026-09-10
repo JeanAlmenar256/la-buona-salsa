@@ -7,23 +7,14 @@ use CodeIgniter\Config\BaseConfig;
 class App extends BaseConfig
 {
     /**
-     * Base Site URL
+     * Auto-detect host or local IP
      */
-    public string $baseURL = 'http://localhost/la-buona-salsa/public/';
+    public string $baseURL = '';
 
-    /**
-     * Allowed Hostnames
-     */
     public array $allowedHostnames = [];
 
-    /**
-     * Index File
-     */
     public string $indexPage = '';
 
-    /**
-     * URI PROTOCOL
-     */
     public string $uriProtocol = 'REQUEST_URI';
 
     public string $permittedURIChars = 'a-z 0-9~%.:_\-';
@@ -39,7 +30,7 @@ class App extends BaseConfig
     public string $charset = 'UTF-8';
 
     /**
-     * Disable force https for localhost development
+     * Disable force https for local network development
      */
     public bool $forceGlobalSecureRequests = false;
 
