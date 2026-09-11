@@ -108,16 +108,20 @@ class Carrito extends BaseController
         $total = ($producto['precio'] * $cantidadItem) + $costoEnvio;
 
         // Leer credenciales de Mercado Pago desde .env
-        $mpToken     = env('MP_ACCESS_TOKEN');
-        $mpPublicKey = env('MP_PUBLIC_KEY');
+        $mpToken     = env('MP_ACCESS_TOKEN') ?? getenv('MP_ACCESS_TOKEN') ?? $_ENV['MP_ACCESS_TOKEN'] ?? '';
+        $mpPublicKey = env('MP_PUBLIC_KEY') ?? getenv('MP_PUBLIC_KEY') ?? $_ENV['MP_PUBLIC_KEY'] ?? '';
+
+        $mpToken     = trim(str_replace(['"', "'"], '', (string)$mpToken));
+        $mpPublicKey = trim(str_replace(['"', "'"], '', (string)$mpPublicKey));
 
         $preferenceId = null;
         $initPoint    = null;
+        $mpError      = null;
 
         if (!empty($mpToken) && $mpToken !== 'TU_ACCESS_TOKEN_AQUI') {
             try {
                 // Configurar Access Token en SDK de Mercado Pago
-                MercadoPagoConfig::setAccessToken(trim($mpToken));
+                MercadoPagoConfig::setAccessToken($mpToken);
 
                 $client = new PreferenceClient();
                 $items = [
@@ -159,9 +163,13 @@ class Carrito extends BaseController
             } catch (MPApiException $e) {
                 $content = $e->getApiResponse() ? json_encode($e->getApiResponse()->getContent()) : $e->getMessage();
                 log_message('error', 'Error MPApiException: ' . $content);
+                $mpError = 'Error de Mercado Pago: ' . $content;
             } catch (\Throwable $e) {
                 log_message('error', 'Error creando preferencia MP: ' . $e->getMessage());
+                $mpError = 'Error conectando con Mercado Pago: ' . $e->getMessage();
             }
+        } else {
+            $mpError = 'Las credenciales de Mercado Pago (MP_ACCESS_TOKEN / MP_PUBLIC_KEY) no están configuradas en el archivo .env del servidor.';
         }
 
         // Si Mercado Pago generó la preferencia con éxito, mostramos el botón de pago
@@ -169,7 +177,7 @@ class Carrito extends BaseController
             return view('carrito/checkout', [
                 'preferenceId' => $preferenceId,
                 'initPoint'    => $initPoint,
-                'publicKey'    => trim($mpPublicKey),
+                'publicKey'    => $mpPublicKey,
                 'producto'     => $producto,
                 'usuario_id'   => $usuario['id'] ?? 1,
                 'usuario'      => $usuario,
@@ -180,11 +188,9 @@ class Carrito extends BaseController
             ]);
         }
 
-        // Fallback: Confirmación directa + Enviar Notificación
-        $this->enviarNotificacionPedido($usuario, $producto, $cantidadItem, $metodoEnvio, $total, $costoEnvio);
-
+        // Si hubo un error con Mercado Pago, recargamos el checkout mostrando el mensaje explicativo
         return view('carrito/checkout', [
-            'pedidoConfirmado' => true,
+            'mpError'      => $mpError,
             'producto'     => $producto,
             'usuario_id'   => $usuario['id'] ?? 1,
             'usuario'      => $usuario,

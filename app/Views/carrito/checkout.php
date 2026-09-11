@@ -144,6 +144,17 @@
                         </h4>
 
                         <?php if (!isset($preferenceId)): ?>
+                            <?php if (!empty($mpError)): ?>
+                                <div class="alert alert-warning border-0 rounded-4 p-3 mb-4 d-flex align-items-start gap-3 shadow-sm">
+                                    <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
+                                    <div>
+                                        <div class="fw-bold text-dark">Aviso de Mercado Pago</div>
+                                        <div class="small text-muted"><?= esc($mpError) ?></div>
+                                        <div class="small mt-1 text-secondary">Asegúrate de haber configurado tu <code>MP_ACCESS_TOKEN</code> y <code>MP_PUBLIC_KEY</code> en el archivo <code>.env</code> del servidor.</div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
                             <form id="formPedido" action="<?= base_url('carrito/procesarPago') ?>" method="POST">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="id_producto" value="<?= $producto['id'] ?>">
