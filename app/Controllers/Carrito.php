@@ -146,14 +146,45 @@ class Carrito extends BaseController
                     ];
                 }
 
-                $preference = $client->create([
+                $preferenceData = [
                     "items" => $items,
-                    "back_urls" => [
-                        "success" => base_url("pago/exitoso?usuario_id=" . ($usuario['id'] ?? 1) . "&id_producto=" . $idProducto . "&cant=" . $cantidadItem . "&envio=" . urlencode($metodoEnvio)),
+                    "payer" => [
+                        "name"  => (string)($usuario['nombre'] ?? 'Cliente'),
+                        "email" => !empty($usuario['email']) ? (string)$usuario['email'] : 'comprador@labuonasalsa.com.ar'
+                    ]
+                ];
+
+                // Mercado Pago rechaza IPs privadas (192.168.x.x, 127.0.0.1) en back_urls ("back_urls invalid. Wrong format").
+                // Solo se configuran back_urls si es un dominio público o si se especifica MP_BACK_URL en .env
+                $customBackUrl = env('MP_BACK_URL');
+                $host = parse_url(base_url(), PHP_URL_HOST);
+                $isIp = filter_var($host, FILTER_VALIDATE_IP);
+
+                if (!empty($customBackUrl)) {
+                    $preferenceData["back_urls"] = [
+                        "success" => rtrim($customBackUrl, '/') . "/pago/exitoso",
+                        "failure" => rtrim($customBackUrl, '/') . "/pago/fallido",
+                        "pending" => rtrim($customBackUrl, '/') . "/pago/exitoso"
+                    ];
+                } elseif (!$isIp && !empty($host) && $host !== 'localhost') {
+                    $preferenceData["back_urls"] = [
+                        "success" => base_url("pago/exitoso"),
                         "failure" => base_url("pago/fallido"),
                         "pending" => base_url("pago/exitoso")
-                    ],
-                ]);
+                    ];
+                }
+
+                try {
+                    $preference = $client->create($preferenceData);
+                } catch (MPApiException $e) {
+                    // Si Mercado Pago rechaza las back_urls por formato, reintentar de inmediato sin back_urls
+                    if (isset($preferenceData['back_urls'])) {
+                        unset($preferenceData['back_urls']);
+                        $preference = $client->create($preferenceData);
+                    } else {
+                        throw $e;
+                    }
+                }
 
                 if ($preference && isset($preference->id)) {
                     $preferenceId = $preference->id;

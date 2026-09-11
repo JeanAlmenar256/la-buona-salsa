@@ -345,7 +345,8 @@
         <?php if (isset($preferenceId) && !empty($publicKey)): ?>
             try {
                 const mp = new MercadoPago('<?= $publicKey ?>', { locale: 'es-AR' });
-                mp.bricks().create('wallet', 'wallet_container', {
+                const bricksBuilder = mp.bricks();
+                bricksBuilder.create('wallet', 'wallet_container', {
                     initialization: { 
                         preferenceId: '<?= $preferenceId ?>', 
                         redirectMode: 'modal' 
@@ -354,6 +355,17 @@
                         texts: {
                             action: 'pay',
                             valueProp: 'security_safety'
+                        }
+                    },
+                    callbacks: {
+                        onReady: () => {
+                            console.log('Wallet Brick listo');
+                        },
+                        onSubmit: () => {
+                            console.log('Iniciando pago...');
+                        },
+                        onError: (error) => {
+                            console.error('Error en Wallet Brick:', error);
                         }
                     }
                 });
