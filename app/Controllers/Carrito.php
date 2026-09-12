@@ -203,7 +203,10 @@ class Carrito extends BaseController
 
                 if ($preference && isset($preference->id)) {
                     $preferenceId = $preference->id;
-                    $initPoint    = $preference->init_point ?? $preference->sandbox_init_point ?? null;
+                    $isSandbox    = str_starts_with($mpToken, 'TEST-');
+                    $initPoint    = ($isSandbox && !empty($preference->sandbox_init_point))
+                                    ? $preference->sandbox_init_point
+                                    : ($preference->init_point ?? $preference->sandbox_init_point ?? null);
                 }
 
             } catch (MPApiException $e) {

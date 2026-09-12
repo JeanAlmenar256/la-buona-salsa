@@ -11,6 +11,31 @@
     
     <!-- SDK Mercado Pago -->
     <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <style>
+        .btn-mp-pago {
+            background-color: #009ee3;
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 1.15rem;
+            padding: 14px 28px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: background-color 0.2s ease, transform 0.15s ease;
+            box-shadow: 0 4px 14px rgba(0, 158, 227, 0.35);
+            border: none;
+            width: 100%;
+            max-width: 400px;
+        }
+        .btn-mp-pago:hover {
+            background-color: #0081ba;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 158, 227, 0.45);
+        }
+    </style>
 </head>
 <body style="background-color: var(--fondo-calido);">
 
@@ -219,13 +244,20 @@
                                 <div class="mb-3">
                                     <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.18.9/mercadopago/logo__large.png" alt="Mercado Pago" height="38">
                                 </div>
-                                <h4 class="fw-bold mb-2 text-dark">Confirmar y Pagar con Mercado Pago</h4>
+                                <h4 class="fw-bold mb-2 text-dark font-display">Confirmar y Pagar</h4>
                                 <p class="text-muted small mb-4">Total a abonar: <strong class="text-danger fs-5">$ <?= number_format($total ?? 6500, 2, ',', '.') ?></strong></p>
                                 
-                                <!-- Contenedor Único y Oficial Wallet Brick de Mercado Pago -->
-                                <div id="wallet_container" class="mb-3"></div>
+                                <!-- Botón Oficial Único de Mercado Pago (Garantizado) -->
+                                <div class="d-flex justify-content-center my-3">
+                                    <a id="btn_directo_mp" href="<?= esc($initPoint) ?>" class="btn-mp-pago">
+                                        <i class="bi bi-wallet2 me-2"></i> Pagar con Mercado Pago
+                                    </a>
+                                </div>
 
-                                <div class="mt-3 pt-2 border-top">
+                                <!-- Contenedor para Wallet Brick (se activa si el script JS del navegador lo soporta) -->
+                                <div id="wallet_container" class="mb-3" style="display: none;"></div>
+
+                                <div class="mt-4 pt-2 border-top">
                                     <a href="<?= base_url('carrito/checkout/' . $producto['id']) ?>" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                                         <i class="bi bi-arrow-left me-1"></i> Modificar cantidad o envío
                                     </a>
@@ -362,7 +394,7 @@
                 bricksBuilder.create('wallet', 'wallet_container', {
                     initialization: { 
                         preferenceId: '<?= $preferenceId ?>', 
-                        redirectMode: 'modal' 
+                        redirectMode: 'self' 
                     },
                     customization: {
                         texts: {
@@ -372,18 +404,24 @@
                     },
                     callbacks: {
                         onReady: () => {
-                            console.log('Wallet Brick listo');
+                            // Cuando el Brick oficial termine de renderizar con éxito, lo mostramos y ocultamos el botón directo
+                            const directBtn = document.getElementById('btn_directo_mp');
+                            const walletDiv = document.getElementById('wallet_container');
+                            if (directBtn && walletDiv) {
+                                directBtn.style.display = 'none';
+                                walletDiv.style.display = 'block';
+                            }
                         },
                         onSubmit: () => {
-                            console.log('Iniciando pago...');
+                            console.log('Iniciando pago Mercado Pago...');
                         },
                         onError: (error) => {
-                            console.error('Error en Wallet Brick:', error);
+                            console.warn('Wallet Brick no disponible, usando botón directo:', error);
                         }
                     }
                 });
             } catch (err) {
-                console.error('Error inicializando Brick MP:', err);
+                console.warn('Error inicializando SDK de Mercado Pago:', err);
             }
         <?php endif; ?>
     </script>
