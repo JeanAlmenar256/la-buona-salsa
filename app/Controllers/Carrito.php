@@ -48,11 +48,15 @@ class Carrito extends BaseController
             ];
         }
 
+        $costoEnvioDefault = 1200;
         return view('carrito/checkout', [
-            'producto'   => $producto,
-            'usuario_id' => $usuario_id,
-            'usuario'    => $usuario,
-            'total'      => $producto['precio']
+            'producto'     => $producto,
+            'usuario_id'   => $usuario_id,
+            'usuario'      => $usuario,
+            'cantidad'     => 1,
+            'metodo_envio' => 'Rappi',
+            'costo_envio'  => $costoEnvioDefault,
+            'total'        => $producto['precio'] + $costoEnvioDefault
         ]);
     }
 

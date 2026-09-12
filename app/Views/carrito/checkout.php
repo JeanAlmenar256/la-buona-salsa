@@ -219,19 +219,17 @@
                                 <div class="mb-3">
                                     <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.18.9/mercadopago/logo__large.png" alt="Mercado Pago" height="38">
                                 </div>
-                                <h5 class="fw-bold mb-2 text-dark">Elige cómo pagar</h5>
-                                <p class="text-muted small mb-4">Tarjetas de crédito, débito, saldo en cuenta o efectivo.</p>
+                                <h4 class="fw-bold mb-2 text-dark">Confirmar y Pagar con Mercado Pago</h4>
+                                <p class="text-muted small mb-4">Total a abonar: <strong class="text-danger fs-5">$ <?= number_format($total ?? 6500, 2, ',', '.') ?></strong></p>
                                 
-                                <!-- Contenedor Oficial Wallet Brick -->
+                                <!-- Contenedor Único y Oficial Wallet Brick de Mercado Pago -->
                                 <div id="wallet_container" class="mb-3"></div>
 
-                                <?php if (!empty($initPoint)): ?>
-                                    <div class="d-grid mt-3">
-                                        <a href="<?= esc($initPoint) ?>" class="btn btn-primary btn-lg py-3 fw-bold rounded-pill shadow-sm" style="background-color: #009ee3; border-color: #009ee3;">
-                                            <i class="bi bi-box-arrow-up-right me-2"></i> Abrir Checkout de Mercado Pago
-                                        </a>
-                                    </div>
-                                <?php endif; ?>
+                                <div class="mt-3 pt-2 border-top">
+                                    <a href="<?= base_url('carrito/checkout/' . $producto['id']) ?>" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                        <i class="bi bi-arrow-left me-1"></i> Modificar cantidad o envío
+                                    </a>
+                                </div>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -248,28 +246,38 @@
                                  height="75" 
                                  class="rounded-3 p-1 bg-light border"
                                  onerror="this.src='<?= base_url('assets/img/producto1.png') ?>'">
-                            <div>
+                            <div class="flex-grow-1">
                                 <h6 class="fw-bold text-dark mb-1"><?= esc($producto['nombre']) ?></h6>
-                                <span class="text-muted small">$ <?= number_format($producto['precio'], 2, ',', '.') ?> c/u</span>
+                                <div class="small text-muted mb-1">
+                                    Precio: <strong>$ <?= number_format($producto['precio'], 2, ',', '.') ?></strong> c/u
+                                </div>
+                                <span class="badge bg-danger-subtle text-danger fw-bold">
+                                    Total Salsas: <span id="displayTotalProducto">$ <?= number_format($producto['precio'] * ($cantidad ?? 1), 2, ',', '.') ?></span>
+                                </span>
                             </div>
                         </div>
 
                         <div class="d-flex justify-content-between mb-2 small text-muted">
-                            <span>Subtotal (<span id="summaryCantidad">1</span> un.):</span>
-                            <span class="fw-bold text-dark" id="displaySubtotal">$ <?= number_format($producto['precio'], 2, ',', '.') ?></span>
+                            <span>Cantidad:</span>
+                            <span class="fw-bold text-dark"><span id="summaryCantidad"><?= esc($cantidad ?? 1) ?></span> frasco(s)</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2 small text-muted">
+                            <span>Subtotal productos:</span>
+                            <span class="fw-bold text-dark" id="displaySubtotal">$ <?= number_format($producto['precio'] * ($cantidad ?? 1), 2, ',', '.') ?></span>
                         </div>
 
                         <div class="d-flex justify-content-between mb-3 small text-muted">
-                            <span>Envío seleccionado:</span>
-                            <span class="fw-bold text-dark" id="displayEnvio">$ 1.200,00</span>
+                            <span>Envío (<span id="summaryMetodoEnvio"><?= esc($metodo_envio ?? 'Rappi') ?></span>):</span>
+                            <span class="fw-bold text-dark" id="displayEnvio">$ <?= number_format($costo_envio ?? 1200, 2, ',', '.') ?></span>
                         </div>
 
                         <hr>
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="fs-5 fw-bold text-dark">Total:</span>
+                            <span class="fs-5 fw-bold text-dark">Total a Pagar:</span>
                             <span class="fs-3 fw-extrabold text-gradient-salsa font-display" id="displayTotal">
-                                $ <?= number_format($producto['precio'] + 1200, 2, ',', '.') ?>
+                                $ <?= number_format($total ?? ($producto['precio'] + ($costo_envio ?? 1200)), 2, ',', '.') ?>
                             </span>
                         </div>
 
@@ -293,7 +301,8 @@
         const displayTotal = document.getElementById('displayTotal');
         const summaryCantidad = document.getElementById('summaryCantidad');
         const btnRestar = document.getElementById('btnRestar');
-        const btnSumar = document.getElementById('btnSumar');
+        const displayTotalProducto = document.getElementById('displayTotalProducto');
+        const summaryMetodoEnvio = document.getElementById('summaryMetodoEnvio');
 
         function calcularTotales() {
             if (!inputCant) return;
@@ -301,10 +310,12 @@
             
             // Obtener costo de envío del radio button seleccionado
             let costoEnvio = 0;
+            let metodoEnvioNombre = 'Rappi';
             const radios = document.getElementsByName('metodo_envio');
             for (const r of radios) {
                 if (r.checked) {
                     costoEnvio = parseFloat(r.getAttribute('data-costo')) || 0;
+                    metodoEnvioNombre = r.value;
                     break;
                 }
             }
@@ -313,8 +324,10 @@
             const total = subtotal + costoEnvio;
 
             if (summaryCantidad) summaryCantidad.innerText = cant;
+            if (displayTotalProducto) displayTotalProducto.innerText = '$ ' + subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2});
             if (displaySubtotal) displaySubtotal.innerText = '$ ' + subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2});
             if (displayEnvio) displayEnvio.innerText = '$ ' + costoEnvio.toLocaleString('es-AR', {minimumFractionDigits: 2});
+            if (summaryMetodoEnvio) summaryMetodoEnvio.innerText = metodoEnvioNombre;
             if (displayTotal) displayTotal.innerText = '$ ' + total.toLocaleString('es-AR', {minimumFractionDigits: 2});
         }
 
