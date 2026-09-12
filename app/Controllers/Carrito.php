@@ -114,6 +114,17 @@ class Carrito extends BaseController
         $mpToken     = trim(str_replace(['"', "'"], '', (string)$mpToken));
         $mpPublicKey = trim(str_replace(['"', "'"], '', (string)$mpPublicKey));
 
+        // Auto-detección: En Mercado Pago, el Access Token es el token largo (~70+ caracteres con IDs numéricos)
+        // y la Public Key es el identificador corto en formato UUID (~44 caracteres).
+        // Si el usuario los invirtió por error en el .env, los intercambiamos automáticamente:
+        if (!empty($mpPublicKey) && !empty($mpToken)) {
+            if (strlen($mpPublicKey) > strlen($mpToken) && preg_match('/-[0-9]{10,}-/i', $mpPublicKey)) {
+                $temp = $mpToken;
+                $mpToken = $mpPublicKey;
+                $mpPublicKey = $temp;
+            }
+        }
+
         $preferenceId = null;
         $initPoint    = null;
         $mpError      = null;
