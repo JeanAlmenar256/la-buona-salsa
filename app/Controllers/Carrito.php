@@ -7,6 +7,8 @@ use MercadoPago\Client\Preference\PreferenceClient;
 use MercadoPago\Exceptions\MPApiException;
 use App\Models\ProductoModel;
 use App\Models\UsuarioModel;
+use App\Models\EnvioModel;
+use App\Models\PedidoModel;
 
 class Carrito extends BaseController
 {
@@ -48,14 +50,19 @@ class Carrito extends BaseController
             ];
         }
 
-        $costoEnvioDefault = 1200;
+        $envioModel = new EnvioModel();
+        $tarifas = $envioModel->getTarifasActivas();
+        $costoEnvioDefault = (float)($tarifas[0]['costo'] ?? 1200.00);
+        $metodoDefault = $tarifas[0]['empresa'] ?? 'Rappi';
+
         return view('carrito/checkout', [
             'producto'     => $producto,
             'usuario_id'   => $usuario_id,
             'usuario'      => $usuario,
             'cantidad'     => 1,
-            'metodo_envio' => 'Rappi',
+            'metodo_envio' => $metodoDefault,
             'costo_envio'  => $costoEnvioDefault,
+            'tarifas'      => $tarifas,
             'total'        => $producto['precio'] + $costoEnvioDefault
         ]);
     }
@@ -67,12 +74,8 @@ class Carrito extends BaseController
         $cantidadItem = (int)($this->request->getPost('cantidad') ?? 1);
         $metodoEnvio  = $this->request->getPost('metodo_envio') ?? 'Rappi';
         
-        $costoEnvio = 0;
-        if ($metodoEnvio === 'Rappi' || $metodoEnvio === 'Uber') {
-            $costoEnvio = 1200;
-        } elseif ($metodoEnvio === 'DiDi') {
-            $costoEnvio = 950;
-        }
+        $envioModel = new EnvioModel();
+        $costoEnvio = $envioModel->getCostoEmpresa($metodoEnvio);
 
         $productoModel = new ProductoModel();
         $producto = null;
@@ -273,11 +276,42 @@ class Carrito extends BaseController
             $usuario = $usuarioModel->find($usuario_id);
         } catch (\Throwable $e) {}
 
-        $costoEnvio = 0;
-        if ($metodoEnvio === 'Rappi' || $metodoEnvio === 'Uber') $costoEnvio = 1200;
-        elseif ($metodoEnvio === 'DiDi') $costoEnvio = 950;
-
+        $envioModel = new EnvioModel();
+        $costoEnvio = $envioModel->getCostoEmpresa($metodoEnvio);
         $total = ($producto['precio'] * $cantidadItem) + $costoEnvio;
+
+        // Calcular costo de producción y ganancia neta para estadísticas financieras
+        $costoProdUnitario = (float)($producto['costo_produccion'] ?? 2500.00);
+        $gananciaNeta = ($producto['precio'] - $costoProdUnitario) * $cantidadItem;
+
+        // Registrar pedido en la base de datos para el panel de superusuario
+        try {
+            $pedidoModel = new PedidoModel();
+            $mpPaymentId = $this->request->getGet('collection_id') ?? $this->request->getGet('payment_id') ?? null;
+            $pedidoModel->insert([
+                'usuario_id'                => (int)($usuario['id'] ?? $usuario_id ?? 1),
+                'producto_id'               => (int)($producto['id'] ?? $idProducto ?? 1),
+                'cantidad'                  => (int)$cantidadItem,
+                'precio_unitario'           => (float)$producto['precio'],
+                'costo_produccion_unitario' => (float)$costoProdUnitario,
+                'metodo_envio'              => (string)$metodoEnvio,
+                'costo_envio'               => (float)$costoEnvio,
+                'total'                     => (float)$total,
+                'ganancia_neta'             => (float)$gananciaNeta,
+                'estado_pago'               => 'aprobado',
+                'metodo_pago'               => 'Mercado Pago',
+                'mp_payment_id'             => $mpPaymentId,
+                'created_at'                => date('Y-m-d H:i:s')
+            ]);
+
+            // Descontar stock del producto
+            if (isset($producto['stock']) && $producto['stock'] > 0) {
+                $nuevoStock = max(0, (int)$producto['stock'] - $cantidadItem);
+                $productoModel->update($producto['id'], ['stock' => $nuevoStock]);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Error guardando pedido en BD: ' . $e->getMessage());
+        }
 
         // Disparar Email de Notificación
         $this->enviarNotificacionPedido($usuario, $producto, $cantidadItem, $metodoEnvio, $total, $costoEnvio);

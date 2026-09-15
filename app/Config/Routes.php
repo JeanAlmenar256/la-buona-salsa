@@ -22,3 +22,19 @@ $routes->get('pago/fallido', 'Carrito::fallo');
 // Rutas de Usuario
 $routes->get('perfil', 'Usuario::perfil');
 $routes->post('usuario/subir-avatar', 'Usuario::subirAvatar');
+
+// Rutas de Superusuario / Administración
+$routes->get('admin/login', 'Admin::login');
+$routes->post('admin/autenticar', 'Admin::autenticar');
+$routes->get('admin/logout', 'Admin::logout');
+
+$routes->group('admin', ['filter' => 'adminAuth'], static function ($routes) {
+    $routes->get('/', 'Admin::dashboard');
+    $routes->get('dashboard', 'Admin::dashboard');
+    $routes->get('productos', 'Admin::productos');
+    $routes->post('productos/guardar', 'Admin::guardarProducto');
+    $routes->get('envios', 'Admin::envios');
+    $routes->post('envios/guardar', 'Admin::guardarEnvio');
+    $routes->get('pedidos', 'Admin::pedidos');
+    $routes->get('usuarios', 'Admin::usuarios');
+});

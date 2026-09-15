@@ -35,6 +35,11 @@
                 <!-- Acceso / Registro Rápido en Navbar -->
                 <div class="d-flex align-items-center gap-3">
                     <?php if (!empty($isLoggedIn)): ?>
+                        <?php if (session()->get('isAdmin')): ?>
+                            <a href="<?= base_url('admin/dashboard') ?>" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm">
+                                <i class="bi bi-shield-lock-fill me-1"></i> Panel Admin
+                            </a>
+                        <?php endif; ?>
                         <a href="<?= base_url('perfil') ?>" class="user-pill">
                             <img src="<?= base_url('uploads/perfiles/' . ($avatar ?? 'default-user.png')) ?>" 
                                  onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'" 
@@ -351,7 +356,10 @@
             <hr class="border-secondary my-4">
 
             <div class="text-center text-white-50 small">
-                © <?= date('Y') ?> La Buona Salsa. Todos los derechos reservados.
+                © <?= date('Y') ?> La Buona Salsa. Todos los derechos reservados. · 
+                <a href="<?= base_url('admin/login') ?>" class="text-white-50 text-decoration-none hover-underline">
+                    <i class="bi bi-shield-lock me-1"></i>Acceso Superusuario
+                </a>
             </div>
         </div>
     </footer>

@@ -13,7 +13,10 @@ class ProductoModel extends Model
     protected $primaryKey = 'id';
 
     // Los campos que el sistema tiene permiso de leer/escribir
-    protected $allowedFields = ['nombre', 'descripcion', 'precio', 'stock', 'imagen_principal', 'imagen_2', 'imagen_3'];
+    protected $allowedFields = [
+        'nombre', 'descripcion', 'precio', 'costo_produccion', 
+        'stock', 'imagen_principal', 'imagen_2', 'imagen_3'
+    ];
 
     // Esto nos devuelve los datos en formato de array, que es lo que espera el controlador
     protected $returnType = 'array';

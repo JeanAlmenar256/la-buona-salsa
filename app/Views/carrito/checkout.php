@@ -185,43 +185,39 @@
                                 <input type="hidden" name="id_producto" value="<?= $producto['id'] ?>">
                                 <input type="hidden" name="usuario_id" value="<?= $usuario_id ?>">
 
-                                <!-- Selección de Entrega -->
+                                <!-- Selección de Entrega Dinámica -->
                                 <div class="row g-3 mb-4">
-                                    <div class="col-md-6 col-xl-3">
-                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_rappi" value="Rappi" checked data-costo="1200">
-                                        <label class="delivery-option-card" for="envio_rappi">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/0/06/Rappi_logo.svg" alt="Rappi" height="24" class="mb-2">
-                                            <div class="small fw-bold text-dark">Rappi Entregas</div>
-                                            <div class="text-success fw-bold small">+$1.200</div>
-                                        </label>
-                                    </div>
-
-                                    <div class="col-md-6 col-xl-3">
-                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_didi" value="DiDi" data-costo="950">
-                                        <label class="delivery-option-card" for="envio_didi">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/DiDi_logo.svg" alt="DiDi" height="24" class="mb-2">
-                                            <div class="small fw-bold text-dark">DiDi Entrega</div>
-                                            <div class="text-success fw-bold small">+$950</div>
-                                        </label>
-                                    </div>
-
-                                    <div class="col-md-6 col-xl-3">
-                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_uber" value="Uber" data-costo="1200">
-                                        <label class="delivery-option-card" for="envio_uber">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/58/Uber_logo_2018.svg" alt="Uber" height="18" class="mb-2 mt-1">
-                                            <div class="small fw-bold text-dark">Uber Flash</div>
-                                            <div class="text-success fw-bold small">+$1.200</div>
-                                        </label>
-                                    </div>
-
-                                    <div class="col-md-6 col-xl-3">
-                                        <input type="radio" class="btn-check" name="metodo_envio" id="envio_retiro" value="Retiro en local" data-costo="0">
-                                        <label class="delivery-option-card" for="envio_retiro">
-                                            <div class="fs-4 mb-1 text-danger"><i class="bi bi-shop"></i></div>
-                                            <div class="small fw-bold text-dark">Retiro en Local</div>
-                                            <div class="text-muted fw-bold small">Gratis ($0)</div>
-                                        </label>
-                                    </div>
+                                    <?php 
+                                        $listaTarifas = !empty($tarifas) ? $tarifas : [
+                                            ['id' => 1, 'empresa' => 'Rappi', 'costo' => 1200.00],
+                                            ['id' => 2, 'empresa' => 'DiDi', 'costo' => 950.00],
+                                            ['id' => 3, 'empresa' => 'Uber', 'costo' => 1200.00],
+                                            ['id' => 4, 'empresa' => 'Retiro en local', 'costo' => 0.00],
+                                        ];
+                                        foreach ($listaTarifas as $idx => $t): 
+                                            $isChecked = ($idx === 0) ? 'checked' : '';
+                                            $costoNum = (float)$t['costo'];
+                                            $empresaId = 'envio_' . strtolower(str_replace(' ', '_', $t['empresa']));
+                                    ?>
+                                        <div class="col-md-6 col-xl-3">
+                                            <input type="radio" class="btn-check" name="metodo_envio" id="<?= $empresaId ?>" value="<?= esc($t['empresa']) ?>" <?= $isChecked ?> data-costo="<?= $costoNum ?>">
+                                            <label class="delivery-option-card" for="<?= $empresaId ?>">
+                                                <?php if ($t['empresa'] === 'Rappi'): ?>
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/06/Rappi_logo.svg" alt="Rappi" height="24" class="mb-2">
+                                                <?php elseif ($t['empresa'] === 'DiDi'): ?>
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/DiDi_logo.svg" alt="DiDi" height="24" class="mb-2">
+                                                <?php elseif ($t['empresa'] === 'Uber'): ?>
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/58/Uber_logo_2018.svg" alt="Uber" height="18" class="mb-2 mt-1">
+                                                <?php else: ?>
+                                                    <div class="fs-4 mb-1 text-danger"><i class="bi bi-shop"></i></div>
+                                                <?php endif; ?>
+                                                <div class="small fw-bold text-dark"><?= esc($t['empresa']) ?></div>
+                                                <div class="<?= $costoNum > 0 ? 'text-success' : 'text-muted' ?> fw-bold small">
+                                                    <?= $costoNum > 0 ? '+$' . number_format($costoNum, 0, ',', '.') : 'Gratis ($0)' ?>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
 
                                 <!-- Cantidad de Frascos -->
