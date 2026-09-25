@@ -6,7 +6,9 @@ use CodeIgniter\Router\RouteCollection;
 
 $routes->get('/', 'Home::index');
 $routes->post('registrar-basico', 'Home::registrarBasico');
+$routes->get('registrar-basico', static function() { return redirect()->to(base_url('/')); });
 $routes->post('login', 'Home::login');
+$routes->get('login', static function() { return redirect()->to(base_url('/')); });
 $routes->get('verificar-email', 'Home::mostrarVerificacion');
 $routes->get('verificar-email/(:segment)', 'Home::verificarEmail/$1');
 $routes->post('verificar-codigo', 'Home::procesarCodigoVerificacion');
