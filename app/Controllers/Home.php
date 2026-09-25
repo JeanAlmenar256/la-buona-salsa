@@ -239,8 +239,19 @@ class Home extends BaseController
             return redirect()->to(base_url('/'))->with('msg_info', 'Tu cuenta ya se encuentra verificada y activa.');
         }
 
+        // Extraer código y token de la cuenta si está pendiente
+        $codigo = null;
+        $token  = null;
+        if (!empty($usuario['token_verificacion'])) {
+            $partes = explode(':', $usuario['token_verificacion']);
+            $codigo = $partes[0] ?? null;
+            $token  = $partes[1] ?? null;
+        }
+
         return view('auth/verificar_email', [
-            'email' => $usuario['email']
+            'email'       => $usuario['email'],
+            'demo_codigo' => $codigo,
+            'demo_token'  => $token
         ]);
     }
 

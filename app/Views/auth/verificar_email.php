@@ -78,19 +78,23 @@
                 <?php endif; ?>
 
                 <!-- Modo de prueba local informativo -->
-                <?php if (session()->getFlashdata('demo_codigo')): ?>
+                <?php 
+                    $codigoPrueba = $demo_codigo ?? session()->getFlashdata('demo_codigo');
+                    $tokenPrueba  = $demo_token ?? session()->getFlashdata('demo_token');
+                ?>
+                <?php if (!empty($codigoPrueba)): ?>
                     <div class="alert alert-warning rounded-4 shadow-sm border-0 mb-4" role="alert">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <i class="bi bi-cpu-fill fs-5 text-dark"></i>
                             <strong>🧪 Modo de Prueba Local (Simulador de Email)</strong>
                         </div>
                         <div class="small">
-                            Tu código de 6 dígitos generado es: <span class="badge bg-dark fs-6 px-3 py-1"><?= session()->getFlashdata('demo_codigo') ?></span>
+                            Tu código de 6 dígitos generado es: <span class="badge bg-dark fs-6 px-3 py-1"><?= esc($codigoPrueba) ?></span>
                         </div>
-                        <?php if (session()->getFlashdata('demo_token')): ?>
+                        <?php if (!empty($tokenPrueba)): ?>
                             <div class="mt-2 small">
                                 O activa directamente haciendo clic aquí: 
-                                <a href="<?= base_url('verificar-email/' . session()->getFlashdata('demo_token')) ?>" class="fw-bold text-decoration-underline text-dark">
+                                <a href="<?= base_url('verificar-email/' . esc($tokenPrueba)) ?>" class="fw-bold text-decoration-underline text-dark">
                                     &rarr; Validar automáticamente por enlace
                                 </a>
                             </div>
