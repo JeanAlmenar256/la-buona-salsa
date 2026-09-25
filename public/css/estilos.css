@@ -217,6 +217,22 @@ body {
     transform: translateY(-2px);
 }
 
+.btn-salsa-gold {
+    background: linear-gradient(135deg, #f29418, #fd580f);
+    color: #fff !important;
+    font-weight: 700;
+    border: none;
+    box-shadow: 0 4px 12px rgba(242, 148, 24, 0.3);
+    transition: var(--transition-smooth);
+}
+
+.btn-salsa-gold:hover {
+    background: linear-gradient(135deg, #fd580f, #9B1212);
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(253, 88, 15, 0.45);
+}
+
 /* Hero Section */
 .hero-section {
     position: relative;

@@ -9,7 +9,7 @@ echo.
 netstat -ano | findstr :3306 >nul
 if %errorlevel% neq 0 (
     echo [1/3] Iniciando motor de base de datos MySQL...
-    start "" /B "D:\wamp64\bin\mysql\mysql8.4.7\bin\mysqld.exe" --port=3306 --basedir="D:/wamp64/bin/mysql/mysql8.4.7" --datadir="D:/wamp64/bin/mysql/mysql8.4.7/data_local"
+    start "" /B "D:\wamp64\bin\mysql\mysql8.4.7\bin\mysqld.exe" --defaults-file="D:\wamp64\bin\mysql\mysql8.4.7\my_local.ini"
     timeout /t 3 /nobreak >nul
 ) else (
     echo [1/3] Base de datos MySQL ya esta en ejecucion.

@@ -82,25 +82,80 @@
         </div>
     </div>
 
-    <!-- Modal Registro -->
+    <!-- Modal Iniciar Sesión -->
+    <div class="modal fade modal-salsa" id="loginModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-salsa-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-box-arrow-in-right me-2"></i> Iniciar Sesión</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-4 bg-white">
+                    <form action="<?= base_url('login') ?>" method="POST">
+                        <?= csrf_field() ?>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Email</label>
+                            <input type="email" name="email" class="form-control salsa-input" placeholder="Tu correo" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold">Contraseña</label>
+                            <div class="input-group">
+                                <input type="password" id="det_login_pwd" name="password" class="form-control salsa-input border-end-0" placeholder="••••••••" required>
+                                <button type="button" class="input-group-text bg-light text-muted" onclick="togglePasswordVisibility('det_login_pwd', this)"><i class="bi bi-eye"></i></button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-salsa-primary w-100 justify-content-center mb-3">Ingresar y Comprar</button>
+                        <div class="text-center pt-2 border-top">
+                            <a href="javascript:void(0)" class="small text-danger text-decoration-none fw-bold" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registroModal">¿No tienes cuenta? Regístrate</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registro Seguro -->
     <div class="modal fade modal-salsa" id="registroModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-salsa-header">
-                    <h5 class="fw-bold mb-0">Regístrate para comprar</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-shield-lock-fill me-2"></i> Regístrate para Comprar</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
                 </div>
                 <div class="modal-body p-4 bg-white">
                     <form action="<?= base_url('registrar-basico') ?>" method="POST">
                         <?= csrf_field() ?>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold">Nombre</label>
+                            <label class="form-label small fw-bold">Nombre Completo</label>
                             <input type="text" name="nombre" class="form-control salsa-input" placeholder="Tu nombre" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold">Email</label>
-                            <input type="email" name="email" class="form-control salsa-input" placeholder="Tu correo" required>
+                            <label class="form-label small fw-bold">Email (Activo)</label>
+                            <input type="email" name="email" class="form-control salsa-input" placeholder="Tu correo activo" required>
+                            <div class="form-text text-muted" style="font-size: 0.75rem;">Te enviaremos un código de seguridad para verificar tu email.</div>
                         </div>
-                        <button type="submit" class="btn btn-salsa-primary w-100 justify-content-center">Continuar</button>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Contraseña (Mínimo 6 caracteres)</label>
+                            <div class="input-group">
+                                <input type="password" id="det_reg_pwd" name="password" class="form-control salsa-input border-end-0" placeholder="••••••••" required minlength="6">
+                                <button type="button" class="input-group-text bg-light text-muted" onclick="togglePasswordVisibility('det_reg_pwd', this)"><i class="bi bi-eye"></i></button>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold">Confirmar Contraseña</label>
+                            <div class="input-group">
+                                <input type="password" id="det_reg_pwd_confirm" name="password_confirm" class="form-control salsa-input border-end-0" placeholder="••••••••" required minlength="6">
+                                <button type="button" class="input-group-text bg-light text-muted" onclick="togglePasswordVisibility('det_reg_pwd_confirm', this)"><i class="bi bi-eye"></i></button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-salsa-primary w-100 justify-content-center mb-3">Crear Cuenta y Validar Email</button>
+                        <div class="text-center pt-2 border-top">
+                            <a href="javascript:void(0)" class="small text-danger text-decoration-none fw-bold" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#loginModal">¿Ya tienes cuenta? Inicia sesión</a>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -109,5 +164,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?= base_url('js/immersive.js') ?>"></script>
+    <script>
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+    </script>
 </body>
 </html>

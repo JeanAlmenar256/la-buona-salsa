@@ -50,17 +50,14 @@
                             <i class="bi bi-box-arrow-right"></i>
                         </a>
                     <?php else: ?>
-                        <form class="nav-quick-form d-none d-md-flex" action="<?= base_url('registrar-basico') ?>" method="POST">
-                            <?= csrf_field() ?>
-                            <input id="guia-nombre" type="text" name="nombre" placeholder="Tu Nombre" required autocomplete="name">
-                            <input id="guia-email" type="email" name="email" placeholder="Tu Email" required autocomplete="email">
-                            <button class="btn-nav-register" type="submit">
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#loginModal">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar Sesión
+                            </button>
+                            <button class="btn btn-sm btn-salsa-gold rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#registroModal">
                                 <i class="bi bi-person-plus-fill me-1"></i> Registrarse
                             </button>
-                        </form>
-                        <button class="btn btn-outline-light rounded-pill px-3 btn-sm d-md-none" data-bs-toggle="modal" data-bs-target="#registroModal">
-                            <i class="bi bi-person-circle me-1"></i> Registro
-                        </button>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -68,6 +65,15 @@
     </nav>
 
     <!-- Notificaciones Flash -->
+    <?php if (session()->getFlashdata('success')): ?>
+        <div class="container mt-3">
+            <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 rounded-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> <?= session()->getFlashdata('success') ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <?php if (session()->getFlashdata('msg_info')): ?>
         <div class="container mt-3">
             <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 rounded-4" role="alert">
@@ -81,6 +87,20 @@
         <div class="container mt-3">
             <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 rounded-4" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i> <?= session()->getFlashdata('error') ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <?php if (session()->getFlashdata('errors')): ?>
+        <div class="container mt-3">
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 rounded-4" role="alert">
+                <h6 class="fw-bold mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Por favor revisa los siguientes campos:</h6>
+                <ul class="mb-0 small">
+                    <?php foreach (session()->getFlashdata('errors') as $err): ?>
+                        <li><?= esc($err) ?></li>
+                    <?php endforeach; ?>
+                </ul>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </div>
@@ -261,19 +281,72 @@
         </div>
     </section>
 
-    <!-- 5. Modal de Registro Rápido (Activado si el usuario intenta comprar sin sesión) -->
+    <!-- 5. Modal Iniciar Sesión -->
+    <div class="modal fade modal-salsa" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-salsa-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="modal-title fw-bold mb-0" id="loginModalLabel">
+                            <i class="bi bi-box-arrow-in-right me-2"></i> Iniciar Sesión
+                        </h4>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <p class="small text-white-50 mb-0 mt-2">
+                        Accede a tu cuenta para ordenar salsas y gestionar tus pedidos.
+                    </p>
+                </div>
+                <div class="modal-body p-4 bg-white">
+                    <form action="<?= base_url('login') ?>" method="POST">
+                        <?= csrf_field() ?>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small">Correo Electrónico</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                <input type="email" name="email" class="form-control salsa-input border-start-0" placeholder="tu@correo.com" required autocomplete="username">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-key text-muted"></i></span>
+                                <input type="password" id="login_password" name="password" class="form-control salsa-input border-start-0 border-end-0" placeholder="Tu contraseña" required autocomplete="current-password">
+                                <button type="button" class="input-group-text bg-light border-start-0 text-muted" onclick="togglePasswordVisibility('login_password', this)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-salsa-primary w-100 justify-content-center py-3 mb-3">
+                            <i class="bi bi-box-arrow-in-right me-2"></i> Ingresar a mi Cuenta
+                        </button>
+
+                        <div class="text-center pt-2 border-top">
+                            <span class="small text-muted">¿Aún no tienes cuenta?</span>
+                            <a href="javascript:void(0)" class="small fw-bold text-decoration-none ms-1 text-danger" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registroModal">
+                                Regístrate aquí
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registro Seguro con Contraseña y Validación de Correo -->
     <div class="modal fade modal-salsa" id="registroModal" tabindex="-1" aria-labelledby="registroModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-salsa-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="modal-title fw-bold mb-0" id="registroModalLabel">
-                            <i class="bi bi-lock-fill me-2"></i> Registro Requerido
+                            <i class="bi bi-shield-lock-fill me-2"></i> Registro Seguro
                         </h4>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <p class="small text-white-50 mb-0 mt-2">
-                        Para procesar tu pedido y organizar tu envío, regístrate con tus datos básicos.
+                        Crea tu cuenta protegida con contraseña y verificación de correo activo.
                     </p>
                 </div>
                 <div class="modal-body p-4 bg-white">
@@ -283,24 +356,53 @@
                             <label class="form-label fw-bold text-dark small">Nombre Completo</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
-                                <input type="text" name="nombre" class="form-control salsa-input border-start-0" placeholder="Ej: Jean Almenar" required>
+                                <input type="text" name="nombre" class="form-control salsa-input border-start-0" placeholder="Ej: Jean Almenar" required autocomplete="name">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small">Correo Electrónico (Debe estar activo)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                <input type="email" name="email" class="form-control salsa-input border-start-0" placeholder="ejemplo@correo.com" required autocomplete="email">
+                            </div>
+                            <div class="form-text text-muted" style="font-size: 0.78rem;">
+                                <i class="bi bi-shield-check me-1 text-success"></i> Te enviaremos un código de seguridad de 6 dígitos a este correo para validarlo.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small">Contraseña (Mínimo 6 caracteres)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                                <input type="password" id="reg_password" name="password" class="form-control salsa-input border-start-0 border-end-0" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+                                <button type="button" class="input-group-text bg-light border-start-0 text-muted" onclick="togglePasswordVisibility('reg_password', this)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label fw-bold text-dark small">Correo Electrónico</label>
+                            <label class="form-label fw-bold text-dark small">Confirmar Contraseña</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
-                                <input type="email" name="email" class="form-control salsa-input border-start-0" placeholder="ejemplo@correo.com" required>
-                            </div>
-                            <div class="form-text text-muted" style="font-size: 0.8rem;">
-                                Te enviaremos la confirmación del pedido y el seguimiento a este correo.
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock-fill text-muted"></i></span>
+                                <input type="password" id="reg_password_confirm" name="password_confirm" class="form-control salsa-input border-start-0 border-end-0" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+                                <button type="button" class="input-group-text bg-light border-start-0 text-muted" onclick="togglePasswordVisibility('reg_password_confirm', this)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-salsa-primary w-100 justify-content-center py-3">
-                            Continuar con mi Compra <i class="bi bi-arrow-right-short fs-5"></i>
+                        <button type="submit" class="btn btn-salsa-primary w-100 justify-content-center py-3 mb-3">
+                            <i class="bi bi-envelope-check me-2"></i> Crear Cuenta y Validar Email
                         </button>
+
+                        <div class="text-center pt-2 border-top">
+                            <span class="small text-muted">¿Ya tienes cuenta creada?</span>
+                            <a href="javascript:void(0)" class="small fw-bold text-decoration-none ms-1 text-danger" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#loginModal">
+                                Iniciar sesión
+                            </a>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -367,5 +469,20 @@
     <!-- Bootstrap Bundle JS & Immersive Script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?= base_url('js/immersive.js') ?>"></script>
+    <script>
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+    </script>
 </body>
 </html>

@@ -28,6 +28,12 @@ class Carrito extends BaseController
             $usuario = $usuarioModel->find($usuario_id);
         } catch (\Throwable $e) {}
 
+        // Verificar que el correo esté validado
+        if ($usuario && empty($usuario['email_verificado'])) {
+            session()->set(['pending_verify_id' => $usuario['id'], 'pending_verify_email' => $usuario['email']]);
+            return redirect()->to(base_url('verificar-email'))->with('error', 'Por seguridad, debes validar tu correo electrónico para procesar el pedido.');
+        }
+
         // Si el usuario no tiene dirección guardada, enviarlo a completar datos
         if ($usuario && (empty($usuario['direccion']) || empty($usuario['telefono']))) {
             return redirect()->to(base_url('completar-datos/' . $usuario_id));

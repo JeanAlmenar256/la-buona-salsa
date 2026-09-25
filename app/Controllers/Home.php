@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\UsuarioModel;
 use App\Models\ProductoModel;
+use App\Libraries\EmailHelper;
 
 class Home extends BaseController
 {
@@ -69,59 +70,288 @@ class Home extends BaseController
 
     public function registrarBasico()
     {
-        $model = new UsuarioModel();
-        $nombre = trim($this->request->getPost('nombre'));
-        $email  = trim($this->request->getPost('email'));
+        $reglas = [
+            'nombre'           => 'required|min_length[3]|max_length[100]',
+            'email'            => 'required|valid_email|max_length[100]',
+            'password'         => 'required|min_length[6]',
+            'password_confirm' => 'required|matches[password]'
+        ];
 
-        if (empty($email) || empty($nombre)) {
-            return redirect()->back()->with('error', 'Por favor ingresa tu nombre y correo.');
+        $mensajes = [
+            'nombre' => [
+                'required'   => 'Por favor ingresa tu nombre completo.',
+                'min_length' => 'El nombre debe tener al menos 3 caracteres.'
+            ],
+            'email' => [
+                'required'    => 'El correo electrónico es obligatorio.',
+                'valid_email' => 'Por favor ingresa un formato de correo válido.'
+            ],
+            'password' => [
+                'required'   => 'La contraseña es obligatoria.',
+                'min_length' => 'La contraseña debe tener un mínimo de 6 caracteres.'
+            ],
+            'password_confirm' => [
+                'required' => 'Debes confirmar tu contraseña.',
+                'matches'  => 'Las contraseñas no coinciden. Intenta de nuevo.'
+            ]
+        ];
+
+        if (!$this->validate($reglas, $mensajes)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        try {
-            $usuario = $model->where('email', $email)->first();
+        $model    = new UsuarioModel();
+        $nombre   = trim($this->request->getPost('nombre'));
+        $email    = strtolower(trim($this->request->getPost('email')));
+        $password = (string)$this->request->getPost('password');
 
-            if (!$usuario) {
-                $id = $model->insert([
-                    'nombre' => $nombre,
-                    'email'  => $email,
-                ]);
-                $usuario = $model->find($id);
-            } else {
-                $model->update($usuario['id'], ['nombre' => $nombre]);
+        $usuarioExistente = $model->where('email', $email)->first();
+
+        if ($usuarioExistente) {
+            // Si ya está verificado, debe iniciar sesión
+            if (!empty($usuarioExistente['email_verificado'])) {
+                return redirect()->back()->withInput()->with('error', 'Este correo ya tiene una cuenta registrada y activa. Por favor, inicia sesión con tu contraseña.');
             }
-        } catch (\Throwable $e) {
-            $usuario = [
-                'id'        => 1,
-                'nombre'    => $nombre,
-                'email'     => $email,
-                'direccion' => '',
-                'telefono'  => ''
-            ];
+
+            // Si está pendiente de verificación, actualizamos nombre y contraseña
+            $model->update($usuarioExistente['id'], [
+                'nombre'        => $nombre,
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                'password'      => $password
+            ]);
+            $usuarioId = $usuarioExistente['id'];
+        } else {
+            // Nuevo usuario con email_verificado = 0
+            $usuarioId = $model->insert([
+                'nombre'           => $nombre,
+                'email'            => $email,
+                'password_hash'    => password_hash($password, PASSWORD_DEFAULT),
+                'password'         => $password,
+                'rol'              => 'cliente',
+                'email_verificado' => 0
+            ]);
         }
 
-        // Establecer sesión
+        // Generar código numérico y token
+        $datosToken = $model->generarTokenVerificacion($usuarioId);
+
+        // Enviar email de activación
+        $resEnvio = EmailHelper::enviarVerificacion($email, $nombre, $datosToken['codigo'], $datosToken['token']);
+
+        // Guardar identificador pendiente en sesión para la pantalla de verificación
         session()->set([
-            'usuario_id' => $usuario['id'] ?? 1,
+            'pending_verify_id'    => $usuarioId,
+            'pending_verify_email' => $email
+        ]);
+
+        // Código de prueba para desarrollo local en caso de que no haya servidor SMTP activo
+        session()->setFlashdata('demo_codigo', $datosToken['codigo']);
+        session()->setFlashdata('demo_token', $datosToken['token']);
+
+        return redirect()->to(base_url('verificar-email'))->with('success', '¡Cuenta creada! Hemos enviado un código de 6 dígitos a ' . esc($email) . ' para verificar y activar tu cuenta.');
+    }
+
+    public function login()
+    {
+        $reglas = [
+            'email'    => 'required|valid_email',
+            'password' => 'required'
+        ];
+
+        if (!$this->validate($reglas)) {
+            return redirect()->back()->withInput()->with('error', 'Por favor ingresa tu correo y contraseña.');
+        }
+
+        $email    = strtolower(trim($this->request->getPost('email')));
+        $password = (string)$this->request->getPost('password');
+
+        $model   = new UsuarioModel();
+        $usuario = $model->autenticarCliente($email, $password);
+
+        if (!$usuario) {
+            return redirect()->back()->withInput()->with('error', 'Correo o contraseña incorrectos.');
+        }
+
+        // Si el usuario es administrador o superadmin
+        if (in_array($usuario['rol'] ?? 'cliente', ['admin', 'superadmin'], true)) {
+            session()->set([
+                'usuario_id' => $usuario['id'],
+                'nombre'     => $usuario['nombre'],
+                'email'      => $usuario['email'],
+                'rol'        => $usuario['rol'],
+                'isLoggedIn' => true,
+                'isAdmin'    => true,
+                'avatar'     => $usuario['avatar'] ?? 'default-user.png'
+            ]);
+            return redirect()->to(base_url('admin/dashboard'))->with('msg_info', 'Sesión de Administrador iniciada.');
+        }
+
+        // Verificar si su email está validado
+        if (empty($usuario['email_verificado'])) {
+            $datosToken = $model->generarTokenVerificacion($usuario['id']);
+            EmailHelper::enviarVerificacion($email, $usuario['nombre'], $datosToken['codigo'], $datosToken['token']);
+
+            session()->set([
+                'pending_verify_id'    => $usuario['id'],
+                'pending_verify_email' => $email
+            ]);
+            session()->setFlashdata('demo_codigo', $datosToken['codigo']);
+            session()->setFlashdata('demo_token', $datosToken['token']);
+
+            return redirect()->to(base_url('verificar-email'))->with('error', 'Tu cuenta aún no está activa. Debes validar tu correo ingresando el código de seguridad.');
+        }
+
+        // Login exitoso
+        session()->set([
+            'usuario_id' => $usuario['id'],
             'nombre'     => $usuario['nombre'],
             'email'      => $usuario['email'],
+            'rol'        => $usuario['rol'] ?? 'cliente',
             'isLoggedIn' => true,
             'avatar'     => $usuario['avatar'] ?? 'default-user.png'
         ]);
 
-        if (!empty($usuario['direccion']) && !empty($usuario['telefono'])) {
-            return redirect()->to(base_url('carrito/checkout/1?usuario_id=' . ($usuario['id'] ?? 1)));
+        if (empty($usuario['direccion']) || empty($usuario['telefono'])) {
+            return redirect()->to(base_url('completar-datos/' . $usuario['id']));
         }
 
-        return redirect()->to(base_url('completar-datos/' . ($usuario['id'] ?? 1)));
+        return redirect()->to(base_url('/'))->with('msg_info', '¡Bienvenido/a de nuevo, ' . esc($usuario['nombre']) . '!');
+    }
+
+    public function mostrarVerificacion()
+    {
+        $session = session();
+        $usuarioId = $session->get('pending_verify_id') ?? $session->get('usuario_id');
+
+        if (!$usuarioId) {
+            return redirect()->to(base_url('/'))->with('error', 'No hay ninguna cuenta pendiente de verificación.');
+        }
+
+        $model   = new UsuarioModel();
+        $usuario = $model->find($usuarioId);
+
+        if (!$usuario) {
+            return redirect()->to(base_url('/'));
+        }
+
+        // Si ya está verificado
+        if (!empty($usuario['email_verificado'])) {
+            return redirect()->to(base_url('/'))->with('msg_info', 'Tu cuenta ya se encuentra verificada y activa.');
+        }
+
+        return view('auth/verificar_email', [
+            'email' => $usuario['email']
+        ]);
+    }
+
+    public function procesarCodigoVerificacion()
+    {
+        $session   = session();
+        $usuarioId = $session->get('pending_verify_id') ?? $session->get('usuario_id');
+        $codigo    = trim($this->request->getPost('codigo'));
+
+        if (!$usuarioId) {
+            return redirect()->to(base_url('/'))->with('error', 'Sesión de verificación expirada. Por favor regístrate o inicia sesión.');
+        }
+
+        if (empty($codigo) || strlen($codigo) < 6) {
+            return redirect()->back()->with('error', 'Por favor ingresa el código numérico de 6 dígitos.');
+        }
+
+        $model  = new UsuarioModel();
+        $valido = $model->verificarPorCodigo($usuarioId, $codigo);
+
+        if (!$valido) {
+            return redirect()->back()->with('error', 'El código de activación ingresado es incorrecto. Por favor verifícalo.');
+        }
+
+        $usuario = $model->find($usuarioId);
+
+        // Iniciar sesión definitiva
+        session()->remove(['pending_verify_id', 'pending_verify_email']);
+        session()->set([
+            'usuario_id' => $usuario['id'],
+            'nombre'     => $usuario['nombre'],
+            'email'      => $usuario['email'],
+            'rol'        => $usuario['rol'] ?? 'cliente',
+            'isLoggedIn' => true,
+            'avatar'     => $usuario['avatar'] ?? 'default-user.png'
+        ]);
+
+        if (empty($usuario['direccion']) || empty($usuario['telefono'])) {
+            return redirect()->to(base_url('completar-datos/' . $usuario['id']))->with('success', '¡Excelente! Correo validado exitosamente. Ahora completa tus datos para el envío.');
+        }
+
+        return redirect()->to(base_url('carrito/checkout/1?usuario_id=' . $usuario['id']))->with('success', '¡Correo validado exitosamente! Ya puedes continuar con tu compra.');
+    }
+
+    public function verificarEmail($token = null)
+    {
+        if (empty($token)) {
+            return redirect()->to(base_url('verificar-email'))->with('error', 'Enlace de verificación inválido.');
+        }
+
+        $model   = new UsuarioModel();
+        $usuario = $model->verificarPorToken($token);
+
+        if (!$usuario) {
+            return redirect()->to(base_url('verificar-email'))->with('error', 'El enlace de activación es inválido o ya ha sido utilizado.');
+        }
+
+        session()->remove(['pending_verify_id', 'pending_verify_email']);
+        session()->set([
+            'usuario_id' => $usuario['id'],
+            'nombre'     => $usuario['nombre'],
+            'email'      => $usuario['email'],
+            'rol'        => $usuario['rol'] ?? 'cliente',
+            'isLoggedIn' => true,
+            'avatar'     => $usuario['avatar'] ?? 'default-user.png'
+        ]);
+
+        if (empty($usuario['direccion']) || empty($usuario['telefono'])) {
+            return redirect()->to(base_url('completar-datos/' . $usuario['id']))->with('success', '¡Correo verificado con éxito! Completa tus datos para coordinar el envío.');
+        }
+
+        return redirect()->to(base_url('carrito/checkout/1?usuario_id=' . $usuario['id']))->with('success', '¡Cuenta activada con éxito!');
+    }
+
+    public function reenviarVerificacion()
+    {
+        $session   = session();
+        $usuarioId = $session->get('pending_verify_id') ?? $session->get('usuario_id');
+
+        if (!$usuarioId) {
+            return redirect()->to(base_url('/'))->with('error', 'No se encontró la cuenta a verificar.');
+        }
+
+        $model   = new UsuarioModel();
+        $usuario = $model->find($usuarioId);
+
+        if (!$usuario) {
+            return redirect()->to(base_url('/'));
+        }
+
+        $datosToken = $model->generarTokenVerificacion($usuarioId);
+        EmailHelper::enviarVerificacion($usuario['email'], $usuario['nombre'], $datosToken['codigo'], $datosToken['token']);
+
+        session()->setFlashdata('demo_codigo', $datosToken['codigo']);
+        session()->setFlashdata('demo_token', $datosToken['token']);
+
+        return redirect()->to(base_url('verificar-email'))->with('success', 'Te hemos enviado un nuevo código de activación a tu correo.');
     }
 
     public function completarDatos($id)
     {
+        $model = new UsuarioModel();
         $usuario = null;
         try {
-            $model = new UsuarioModel();
             $usuario = $model->find($id);
         } catch (\Throwable $e) {}
+
+        if ($usuario && empty($usuario['email_verificado'])) {
+            session()->set(['pending_verify_id' => $usuario['id'], 'pending_verify_email' => $usuario['email']]);
+            return redirect()->to(base_url('verificar-email'))->with('error', 'Por seguridad, debes validar tu correo electrónico antes de ingresar tus datos de envío.');
+        }
 
         return view('completar_registro', [
             'usuario_id' => $id,

@@ -28,6 +28,7 @@
                         <th>#ID</th>
                         <th>Cliente</th>
                         <th>Contacto</th>
+                        <th>Estado Email</th>
                         <th>Dirección de Entrega</th>
                         <th>Entre Calles</th>
                         <th>CP</th>
@@ -57,6 +58,17 @@
                                 <div class="small fw-semibold text-dark">
                                     <i class="bi bi-whatsapp me-1 text-success"></i><?= esc($u['telefono'] ?? '-') ?>
                                 </div>
+                            </td>
+                            <td>
+                                <?php if (!empty($u['email_verificado'])): ?>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                                        <i class="bi bi-patch-check-fill me-1"></i> Activo
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1 small">
+                                        <i class="bi bi-clock-history me-1"></i> Pendiente
+                                    </span>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <span class="small fw-semibold text-dark">

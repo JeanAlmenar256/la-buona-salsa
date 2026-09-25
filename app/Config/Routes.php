@@ -6,6 +6,11 @@ use CodeIgniter\Router\RouteCollection;
 
 $routes->get('/', 'Home::index');
 $routes->post('registrar-basico', 'Home::registrarBasico');
+$routes->post('login', 'Home::login');
+$routes->get('verificar-email', 'Home::mostrarVerificacion');
+$routes->get('verificar-email/(:segment)', 'Home::verificarEmail/$1');
+$routes->post('verificar-codigo', 'Home::procesarCodigoVerificacion');
+$routes->post('reenviar-verificacion', 'Home::reenviarVerificacion');
 $routes->get('completar-datos/(:num)', 'Home::completarDatos/$1');
 $routes->post('guardar-detalles', 'Home::guardarDetalles');
 $routes->get('repararImagenes', 'Home::repararImagenes');
