@@ -106,7 +106,7 @@
                     <h2 class="fw-bold text-dark font-display mb-2">Valida tu Correo</h2>
                     <p class="text-muted mb-4">
                         Hemos enviado un código de 6 dígitos a tu casilla:<br>
-                        <strong class="text-dark fs-6"><?= esc( ?? 'tu correo registrado') ?></strong>
+                        <strong class="text-dark fs-6"><?= esc($email ?? 'tu correo registrado') ?></strong>
                     </p>
 
                     <form action="<?= base_url('verificar-codigo') ?>" method="POST" class="mb-4">
